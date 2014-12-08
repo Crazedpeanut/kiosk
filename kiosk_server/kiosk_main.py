@@ -13,7 +13,9 @@ def check_in(self, data):
 
 	print(kiosk_http.http_request(HOST, PORT,method,resource , data))
 		
+def not_json_recv(self, data):
+	print(data)
 
-command_list = {'printdata' : print_data, 'checkin' : check_in}
+command_list = {'notjson' : not_json_recv, 'checkin' : check_in}
 
 serv = kiosk_network.start_server(command_list)

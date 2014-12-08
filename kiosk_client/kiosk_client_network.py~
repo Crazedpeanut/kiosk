@@ -112,7 +112,7 @@ def command_handler(self, raw_command):
                 except Exception as e:
                     dbug.debug("Gibberish sent, not json format..")
                     json_command = "notjson"
-                    json_data = raw_command
+                    json_data = json_load['data']
 
                 if(json_command in self.command_list):
                     self.command_list[json_command](self, json_data)

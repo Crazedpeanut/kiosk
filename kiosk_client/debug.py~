@@ -1,4 +1,4 @@
-DEBUGGING_MODE = True
+DEBUGGING_MODE = False
 PRINT_DATETIME = True
 import datetime
 

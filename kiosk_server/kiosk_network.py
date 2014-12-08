@@ -53,7 +53,7 @@ class ServerThread(threading.Thread):
 	def __init__(self,command_list):
 		threading.Thread.__init__(self)
 		self.command_list = command_list
-		self.host = "localhost"
+		self.host = "10.10.10.144"
 		self.port = 39998 
 		self.threads = []
 
@@ -109,27 +109,26 @@ def command_handler(self, raw_command):
 #		self.socket.send(response.encode())
 
 	processed_command = parse_raw_command(raw_command)
-	processed_data = parse_raw_command_data(raw_command)
+	try:
+		json_load = json.loads(processed_command)
 
-	if(processed_command in self.command_list):
-		self.command_list[processed_command](self, json.loads(processed_data))
+		json_command = json_load['command']
+		json_data = json_load['data']
+	except Exception as e:
+		dbug.debug("Gibberish sent, not json format..")
+		json_command = "notjson"
+		json_data = raw_command
+
+	if(json_command in self.command_list):
+		self.command_list[json_command](self, json_data)
         
 def parse_raw_command(raw_command):
 	processed_command = ""
 
 	if('\n' in raw_command):
-		pipe_index = raw_command.find('|')
+		pipe_index = raw_command.find('\n')
 		processed_command = raw_command[:pipe_index]
 	return processed_command
-
-def parse_raw_command_data(raw_command):
-	processed_data = ""
-
-	if('\n' in raw_command and '|' in raw_command):
-		pipe_index = raw_command.find('|')
-		newline_index = raw_command.find('\n')
-		processed_data = raw_command[pipe_index + 1:newline_index - 1]
-	return processed_data
 
 def start_server(command_list):
 	serv_thread = ServerThread(command_list)
