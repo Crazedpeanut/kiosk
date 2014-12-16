@@ -3,6 +3,7 @@ import time, datetime
 import simplejson as json
 import read_from_hidraw as bcode_listen
 import socket
+import commands
 
 HOST = "localhost"
 PORT = 80
@@ -37,7 +38,12 @@ def create_heartbeat():
 
 #TODO
 def http_result_handler(result):
-	print(result)
+	command_list = {"test": commands.test_command}
+	json_data = json.loads(result)
+	comm = json_data['command']
+	
+	if(comm in command_list):
+		command_list[comm](json_data)
 		
 def bcode_handler(bcode):
 	check_in = create_check_in(bcode)
@@ -52,6 +58,7 @@ def main():
 		#http_result_handler(http_result)
 		print(create_heartbeat())
 		time.sleep(PAUSE_BETWEEN_REQUESTS)
+
 if __name__ == "__main__":
 	main()	
 
