@@ -7,6 +7,8 @@ from copy import deepcopy
 def send_to_lightbars():
 	message = app.frame_to_json()
 	kiosk.serv.send_to_all(message)	
+	f = open("demo_led_format.json", "w")
+	f.write(message)
 
 def blank_lightbars():
 	message = '{"command": "blanklightbars"}'
