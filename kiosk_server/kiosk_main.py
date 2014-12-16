@@ -1,5 +1,5 @@
 import kiosk_network
-import kiosk_http
+#import kiosk_http
 
 HOST = "squirtle"
 PORT = 80
@@ -11,7 +11,7 @@ def check_in(self, data):
 	resource = "/barcode/test.php"
 	method = "POST"
 
-	print(kiosk_http.http_request(HOST, PORT,method,resource , data))
+	#print(kiosk_http.http_request(HOST, PORT,method,resource , data))
 		
 def not_json_recv(self, data):
 	print(data)

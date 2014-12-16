@@ -3,7 +3,7 @@ PRINT_DATETIME = True
 import datetime
 
 def debug(message):
-	if(DEBUGGING_MODE == True):
+	if(DEBUGGING_MODE == False):
 		dbugmsg = "DEBUG: " + message
 		
 		if(PRINT_DATETIME == True):

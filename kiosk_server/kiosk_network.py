@@ -20,11 +20,10 @@ class ClientThread(threading.Thread):
 		self.command_list = command_list
 		self.connection_open = True
 		self.serv_reference = serv_reference
-
 		dbug.debug ("[+] New thread started for "+ip+":"+str(port))
 
-
 	def run(self):  
+		#print(self.socket.getpeername())
 		dbug.debug ("Connection from : "+self.ip+":"+str(self.port))
 		self.socket.send(WELCOME_MESSAGE.encode())                  
 		data = "dummydata"	
@@ -55,7 +54,9 @@ class ServerThread(threading.Thread):
 		self.command_list = command_list
 		self.host = "10.10.10.144"
 		self.port = 39998 
-		self.threads = []
+		self.threads = []	
+		self.connection_open = True
+		dbug.debug("Server starting..")
 
 	def run(self):
 		tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -64,7 +65,7 @@ class ServerThread(threading.Thread):
 		tcpsock.bind((self.host,self.port))
 		self.threads = []
 	
-		while True:
+		while (self.connection_open == True):
 			tcpsock.listen(4)
 			dbug.debug("\nListening for incoming connections...")
 			(clientsock, (ip, port)) = tcpsock.accept()
@@ -75,14 +76,19 @@ class ServerThread(threading.Thread):
 
 			for t in self.threads:
 				t.join()
+	def quit(self):
+		for t in self.threads:
+			t.connection_open = False		
 
-	def send_to_all(self, command, data):
+		dbug.debug("Quitting Server..")
+		self.connection_open = False
+
+	def send_to_all(self, command):
 
 		if(self.count_threads() == 0):
 			dbug.debug("No open connections to send to..")
 			return None
-		message = command + "|" + data + "\r\n"
-		dbug.debug("MESSAGE: " + message)
+		message = command + "\n"
 		message = message.encode()
 		for t in self.threads:
 			t.socket.sendall(message)

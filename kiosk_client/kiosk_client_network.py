@@ -5,7 +5,7 @@ import errno
 import simplejson as json
 import debug as dbug
 
-HOST = "squirtle.lan"
+HOST = "numbat.local"
 PORT = 39998    
 BUFFER_SIZE = 4096
 ENCODING = "utf-8"
@@ -99,7 +99,8 @@ class network_client_thread(threading.Thread):
 		return result
 	
 	def send_message(self,command):
-		message = command + "\n"
+		print(str(command))
+		message = str(command) + "\n"
 		self.sock.sendall(message.encode())
 
 def command_handler(self, raw_command):
