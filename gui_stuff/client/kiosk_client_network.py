@@ -5,11 +5,9 @@ import errno
 import simplejson as json
 import debug as dbug
 
-##### INCREDIBLY BIG BUFFER SIZE - SHOULD COMPRESS COMMANDS
-
-HOST = "squirtle"
+HOST = "10.10.10.117"
 PORT = 39998    
-BUFFER_SIZE = 100000
+BUFFER_SIZE = 1024
 ENCODING = "utf-8"
 CONNECT_WAIT = 5
 SOCKET_TIMEOUT = 5
@@ -65,7 +63,8 @@ class network_client_thread(threading.Thread):
 						self.connected = False
 						self.failed_to_connect = True
 			except Exception as exception:
-				print (exception)	
+                                print (exception)	
+                                time.sleep(CONNECT_WAIT)
 
 	def run(self):
 				
@@ -75,13 +74,15 @@ class network_client_thread(threading.Thread):
 				self.connect_to_server()
 
 			try:
-				data = self.sock.recv(BUFFER_SIZE)
-				while len(data):
-					self.callback(self, data.decode(ENCODING))
-					data = self.sock.recv(BUFFER_SIZE)
-			
-				self.connected = False
-
+                                
+                            data = self.sock.recv(BUFFER_SIZE).decode(ENCODING)
+                            
+                            while(len(data)):
+                                data += self.sock.recv(BUFFER_SIZE).decode(ENCODING)
+                                if("||" in data):
+                                    break;
+                            self.callback(self, data) 
+                            
 			except socket.error as socket_e:
 				if(socket_e.errno == None):
 					dbug.debug(str(socket_e))
@@ -106,7 +107,9 @@ class network_client_thread(threading.Thread):
 		self.sock.sendall(message.encode())
 
 def command_handler(self, raw_command):
+                #dbug.debug(raw_command)
                 processed_command = parse_raw_command(raw_command)
+                dbug.debug(processed_command)
                 try:
                     json_load = json.loads(processed_command)
 

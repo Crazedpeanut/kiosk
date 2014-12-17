@@ -1,0 +1,79 @@
+import socket
+
+class MySocket:
+
+        def __init__(self, host, port):
+                self.clientSocket = socket.socket(socket.AF_INET, socket.SOCK_ST REAM)
+                self.clientSocket.connect(host, port)
+
+        def send(self, message):
+                self.clientSocket.send("""{'data': '%'}""", message)
+
+if __name__ == "__main__":
+        HOST = "definium.net"
+        PORT = 44441
+        client = MySocket(HOST, PORT)
+        client.send("This is a test")
+
+-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------
+
+import simplejson as json
+import socketserver
+import psycopg2
+import time
+
+class MyTCPHandler(socketserver.StreamRequestHandler):
+
+    def handle(self):
+
+        #TODO: Do connection pooling here?
+        try:
+            conn = psycopg2.connect("dbname='andrew'")
+            cur = conn.cursor()
+            print("Connected to dabtabase")
+        except Exception as e:
+            print ("Unable to connect to database", e)
+            return
+
+        while 1:
+            self.data = self.rfile.readline().strip()
+            print("{} sent:".format(self.client_address[0]), self.data)
+            address = self.client_address[0]
+
+            if self.data == b'':
+                self.wfile.write(b'OK\n')
+                break
+
+            try:
+                j = json.loads(self.data)
+                if 'data' in j:
+                    cur.execute("""insert into test (ip, data) values (%(ip)s, %(data)s)""", {'ip': address, 'data': j['data']})
+                    conn.commit()
+                    print("Inserting %s: %s" % (address, j['data']))
+            except Exception as e:
+                print("Error whilst adding gateway event:", e)
+
+        try:
+            cur.close()
+            conn.close()
+        except Exception as e:
+            print("Error whilst closing database connection:", e)
+
+if __name__ == "__main__":
+
+    HOST, PORT = "", 44441
+
+    server = socketserver.TCPServer((HOST, PORT), MyTCPHandler)
+
+    # Activate the server; this will keep running until you
+
+    # interrupt the program with Ctrl-C
+
+    server.serve_forever()
+

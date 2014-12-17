@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import gzip 
 import socket, threading
 import simplejson as json
 import debug as dbug
@@ -8,6 +8,8 @@ SOCKET_TIMEOUT = 5
 WELCOME_MESSAGE = "\nWelcome to the server \n\n"
 BUFFER_SIZE = 4096
 ENCODING = "utf-8"
+HOST = "localhost"
+PORT = 39998
 
 class ClientThread(threading.Thread):
 	
@@ -52,8 +54,8 @@ class ServerThread(threading.Thread):
 	def __init__(self,command_list):
 		threading.Thread.__init__(self)
 		self.command_list = command_list
-		self.host = "10.10.10.144"
-		self.port = 39998 
+		self.host = HOST
+		self.port = PORT
 		self.threads = []	
 		self.connection_open = True
 		dbug.debug("Server starting..")
@@ -84,15 +86,22 @@ class ServerThread(threading.Thread):
 		self.connection_open = False
 
 	def send_to_all(self, command):
+		tmp_file = open("tmp.txt.gz", "wb")
+		tmp_file.write(command)
+		tmp_file.close()
+		tmp_file = open("tmp.txt.gz", "rb")
 
 		if(self.count_threads() == 0):
 			dbug.debug("No open connections to send to..")
 			return None
 		message = command + "\n"
 		message = message.encode()
+		message = tmp_file.read()
 		for t in self.threads:
 			t.socket.sendall(message)
-	
+		tmp_file.close()
+		print(message)
+
 	def refresh_thread_array(self):
 		new_threads = []
 		
