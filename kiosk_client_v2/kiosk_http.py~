@@ -23,7 +23,7 @@ def http_request(params):
     conn.request(method, resource, params, headers)
     response = conn.getresponse()
     result = response.read()
-    #print(result)
+    print(result)
     conn.close()
 
     f = open("tmp.txt.gz", "wb")
@@ -31,7 +31,7 @@ def http_request(params):
     f.close()
     f = gzip.open("tmp.txt.gz", "r")
     result = f.read()
-    #dbug.debug(result.decode(ENCODING))
+    dbug.debug(result.decode(ENCODING))
     callback(result)
 
 

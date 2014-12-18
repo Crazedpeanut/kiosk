@@ -9,7 +9,9 @@ def send_frame_to_lightbars():
 	kiosk.serv.send_to_all(message)	
 	
 def send_sequence_to_lightbars():
-	message = app.sequence_to_json(5, True, 0)
+	message = app.sequence_to_json(5, 5, 0)
+	#f = open("file.txt", "w")
+	f.write(message)
 	kiosk.serv.send_to_all(message)
 	print("-------------")
 	print(message)

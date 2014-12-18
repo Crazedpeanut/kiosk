@@ -21,7 +21,7 @@ def play_sequence(data):
     f = open("sequence" + data["sequence_num"] + ".sequence", "r")
     data = f.read()
     print(data)
-    data = data.replace("\'", "\"")
+    data.replace("\'", "\"")
     data = json.loads(data) 
     for x in range(int(data["loop"])):
         for frame in data['frames']:

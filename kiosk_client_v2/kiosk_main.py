@@ -4,23 +4,36 @@ import simplejson as json
 import read_from_hidraw as bcode_listen
 import socket
 import commands
+import threading
+import debug as dbug
 
-HOST = "localhost"
+HOST = "squirtle.lan"
 PORT = 80
 METHOD = "POST"
 RESOURCE = "/barcode/test.php"
-
-PAUSE_BETWEEN_REQUESTS = 60
-
+PAUSE_BETWEEN_HEARBEAT = 60
 DATA_FILE = "data.json"
+MAINLOOP_PAUSE = 0.001
 
-#TODO
-def get_kiosk_id():
-	return 1;
+threads = []
+
+class thread_worker(threading.Thread):
+    def __init__(self, delegate, delegate_params):
+        threading.Thread.__init__(self)
+        self.delegate = delegate
+        self.delegate_params = delegate_params
+
+    def run(self):
+        if(self.delegate_params != None):
+            self.delegate(self.delegate_params)
+        else:
+            self.delegate()
+
+        refresh_thread_array()
 
 def create_check_in(barcode):	
-	kiosk = get_kiosk_id()
-	return '{"barcode": %s, "kiosk": %s}\n' % (barcode, kiosk)
+	kiosk = socket.gethostname()
+	return '{"barcode": "%s", "kiosk": "%s"}\n' % (barcode, kiosk)
 
 def record_check_in(check_in):
 	try:
@@ -31,33 +44,57 @@ def record_check_in(check_in):
 
 def create_heartbeat():
 	timestamp = datetime.datetime.now()
-	kiosk = get_kiosk_id()
-	name = socket.gethostname()
-	ip = socket.gethostbyname(name)
-	return '{"timestamp": %s, "kiosk": %s, "name": %s, "ip": %s}' % (timestamp, kiosk, name, ip)
+	kiosk = socket.gethostname()
+	ip = socket.gethostbyname(kiosk)
+	return '{"timestamp": "%s", "kiosk": "%s", "ip": "%s"}' % (timestamp, kiosk, ip)
 
 #TODO
 def http_result_handler(result):
-	command_list = {"test": commands.test_command}
-	json_data = json.loads(result)
-	comm = json_data['command']
-	
-	if(comm in command_list):
-		command_list[comm](json_data)
+    command_list = {"play_sequence":commands.play_sequence,"test": commands.test_command, "loadsequence":commands.load_sequence, "printdata":commands.print_data, "updateleds":commands.update_lights, "blanklightars":commands.blank_lightbars}
+
+    json_data = json.loads(result)
+    comm = json_data['command']	
+    if(comm in command_list):
+        command_list[comm](json_data)
 		
 def bcode_handler(bcode):
-	check_in = create_check_in(bcode)
-	record_check_in(check_in)
+    check_in = create_check_in(bcode)
+    #record_check_in(check_in)
+    params = {"host":HOST, "port":PORT, "method":METHOD, "resource":RESOURCE, "data":json.loads(check_in), "callback":http_result_handler}  
+    create_thread_worker(http.http_request, params)
+
+def create_thread_worker(delegate, delegate_params):
+    new_thread = thread_worker(delegate, delegate_params)
+    new_thread.start()
+    threads.append(new_thread)
+    return new_thread
+
+def refresh_thread_array():
+    global threads
+
+    for t in threading.enumerate():
+        threads.append(t)
+
+def ticker(params):
+    time_in_seconds = params["time"]
+    delegate = params["delegate"]
+    delegate_params = params["delegate_params"]
+
+    while(True):
+        time.sleep(time_in_seconds)
+        delegate(delegate_params)
 
 def main():
-	
-	bcode_listen.start_listening(bcode_handler)
-	
-	while(True):
-		#http_result = http.http_request(HOST, PORT, METHOD, RESOURCE, json.loads(data))	
-		#http_result_handler(http_result)
-		print(create_heartbeat())
-		time.sleep(PAUSE_BETWEEN_REQUESTS)
+    bcode_listen.start_listening(bcode_handler)
+
+    data = create_heartbeat() 
+    params = {"host":HOST, "port":PORT, "method":METHOD, "resource":RESOURCE, "data":json.loads(data), "callback":http_result_handler}
+		
+    ticker_params = {"time":PAUSE_BETWEEN_HEARBEAT, "delegate": http.http_request, "delegate_params": params}
+    create_thread_worker(ticker, ticker_params)	
+
+    while(True):    	
+        time.sleep(MAINLOOP_PAUSE)
 
 if __name__ == "__main__":
 	main()	

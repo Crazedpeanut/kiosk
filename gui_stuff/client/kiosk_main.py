@@ -2,9 +2,6 @@ import kiosk_client_network as kiosk_network
 import lightscript_v2 as ls
 import time
 
-def print_data(self, data):
-    print(data)
-
 def update_lights(self, data):
     print("-------------------------------")
     for led in data['leds']:
