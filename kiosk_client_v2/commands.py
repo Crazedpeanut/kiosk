@@ -1,6 +1,7 @@
 import lightscript_v2 as ls
 import time
 import simplejson as json
+import os
 
 def test_command(data):
     ls.mode_3(255, 0, 0)
@@ -11,6 +12,7 @@ def update_lights(data):
         time.sleep(0.002)
 
 def load_sequence(data):
+    os.remove("sequence"+sequence_num+".sequence")
     sequence_num = data["sequence_num"]
     f = open("sequence"+sequence_num+".sequence", "w")
     f.write(str(data))
