@@ -22,7 +22,7 @@ def debug(message):
         while(debugging_active == True):
             time.sleep(0.5)
         
-        dbugmsg += "\n\n\n"
+        debugmsg += "\n\n\n"
 
         try:
             debugging_active = True

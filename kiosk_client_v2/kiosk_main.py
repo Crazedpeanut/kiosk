@@ -53,9 +53,12 @@ def http_result_handler(result):
     command_list = {"play_sequence":commands.play_sequence,"test": commands.test_command, "loadsequence":commands.load_sequence, "printdata":commands.print_data, "updateleds":commands.update_lights, "blanklightars":commands.blank_lightbars}
 
     json_data = json.loads(result)
-    comm = json_data['command']	
-    if(comm in command_list):
-        command_list[comm](json_data)
+    
+    serv_commands = json_data['commands']
+
+    for comm in serv_commands:
+        if(comm['command'] in command_list):
+        	command_list[comm['command']](comm)
 		
 def bcode_handler(bcode):
     check_in = create_check_in(bcode)

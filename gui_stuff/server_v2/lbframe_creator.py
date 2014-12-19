@@ -10,7 +10,7 @@ def send_frame_to_lightbars():
 	
 def send_sequence_to_lightbars():
 	message = app.sequence_to_json(5, 5, 0)
-	#f = open("file.txt", "w")
+	f = open("file.txt", "w")
 	f.write(message)
 	kiosk.serv.send_to_all(message)
 	print("-------------")
@@ -148,7 +148,8 @@ class App():
 
 	#fps = frames per second, loop = T/F, sequence_num = reference_number on client
 	def sequence_to_json(self, fps, loop, sequence_num):
-		json = '{"command":"loadsequence", "fps": "'+str(fps)+'", "loop":"'+str(loop)+'",'
+		json = '{"commands":['
+		json += '{"command":"loadsequence", "fps": "'+str(fps)+'", "loop":"'+str(loop)+'",'
 		json += '"frames":['
 		for f_index in range(len(self.frames)):
 			frame = self.frames[f_index]
@@ -164,6 +165,7 @@ class App():
 			json += ']}'
 			if(f_index != len(self.frames) -1):
 				json += ", "
+		json += ']}'
 		json += ']}'
 		return(json)
 
