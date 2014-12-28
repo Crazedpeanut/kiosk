@@ -1,10 +1,18 @@
+'''
+Author: John Kendall
+Date: 18/12/14
+
+Description: Logging script to display debug messages on in the standard output or to record them in a file
+'''
+
 import datetime
 import os
 import time
+import settings
 
-DEBUGGING = True
-DEBUGGING_MODE = 2
-PRINT_DATETIME = True
+DEBUGGING = settings.DEBUGGING
+DEBUGGING_MODE = settings.DEBUGGING_MODE
+PRINT_DATETIME = settings.PRINT_DATETIME
 
 debugging_active = False
 

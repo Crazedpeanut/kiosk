@@ -1,10 +1,15 @@
+'''
+Author: John Kendall
+Date: 18/12/14
+
+Description: Reads from the hidraw device file. As a way of binding to a barcode scanner (Requires either root permissions or read permission of the hidraw device file)
+'''
 import time
 import sys
 import re
 import threading
 import USBKey_converter as USBKey
-
-f = open('/dev/hidraw0', 'r')
+import debug as dbug
 
 buffersize = 16
 TIME_WAIT = 0.2
@@ -16,6 +21,11 @@ class bcode(threading.Thread):
 		threading.Thread.__init__(self)
 
 	def run(self):
+		try:
+			f = open('/dev/hidraw0', 'r')
+		except Exception as e:
+			dbug.debug(str(e))
+						
 		while(True):
 			barcode = ""
             

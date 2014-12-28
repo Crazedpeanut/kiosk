@@ -1,10 +1,11 @@
 import datetime
 import os
 import time
+import settings
 
-DEBUGGING = True
-DEBUGGING_MODE = 2
-PRINT_DATETIME = True
+DEBUGGING = settings.DEBUGGING
+DEBUGGING_MODE = settings.DEBUGGING_MODE
+PRINT_DATETIME = settings.PRINT_DATETIME
 
 debugging_active = False
 
@@ -22,7 +23,7 @@ def debug(message):
         while(debugging_active == True):
             time.sleep(0.5)
         
-        debugmsg += "\n\n\n"
+        dbugmsg += "\n\n\n"
 
         try:
             debugging_active = True

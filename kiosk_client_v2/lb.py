@@ -1,3 +1,9 @@
+'''
+Author: Mike
+Date: 18/12/14
+
+Description: Communicate with lightbars over CANbus protocol
+'''
 #!/usr/bin/env python
 
 import time

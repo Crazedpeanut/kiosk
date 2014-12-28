@@ -1,3 +1,9 @@
+'''
+Author: John Kendall and Andrew Jones
+Date: 18/12/14
+
+Description: Convert USB keys into ASCII characters
+'''
 def usbkey_to_char(key):
 	key = int(ord(key))
 	if 4 <= key <= 29: #A-Z

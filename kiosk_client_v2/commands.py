@@ -1,3 +1,10 @@
+'''
+Author: John Kendall
+Date: 18/12/14
+
+Description: Assorted functions to be called by the http_result_handler
+'''
+
 import lightscript_v2 as ls
 import time
 import simplejson as json

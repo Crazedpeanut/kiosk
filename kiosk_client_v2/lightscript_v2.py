@@ -1,3 +1,10 @@
+'''
+Author: John Kendall
+Date: 18/12/14
+
+Description: Assorted functions to control lightbars. Contains methods to save and play sequences, and other stuff
+'''
+
 import lb as can
 import time
 from random import randrange
