@@ -15,6 +15,7 @@ import commands
 import threading
 import debug as dbug
 import settings
+import queue 
 
 HOST = settings.WEB_SERVER_HOST
 PORT = settings.WEB_SERVER_PORT
@@ -24,6 +25,7 @@ PAUSE_BETWEEN_HEARBEAT = 60
 DATA_FILE = settings.STORED_REQUESTS_FILE
 MAINLOOP_PAUSE = 0.001
 
+data_file_operation_queue = queue.Queue()
 threads = []
 
 class thread_worker(threading.Thread):
@@ -41,46 +43,86 @@ class thread_worker(threading.Thread):
         refresh_thread_array()
 
 def create_check_in(barcode):	
-	kiosk = socket.gethostname()
-	return '{"barcode": "%s", "kiosk": "%s"}' % (barcode, kiosk)
+    kiosk = socket.gethostname()
+    return {"checkin":{"barcode": barcode, "kiosk": kiosk}}
 
-def record_check_in(check_in):
-	try:
-		f = open(DATA_FILE, 'a')
-		f.write(check_in)
-	except Exception as e:
-		print(str(e))
+def file_operation_queue_add(delegate, params):
+    queue_node = {"delegate" : delegate, "params":params}
+    data_file_operation_queue.put(queue_node)
+    dbug.debug("Added file operation to queue")
+
+def file_operation_queue_perform_operations():
+    while(True):
+        if(data_file_operation_queue.qsize()):
+            node = data_file_operation_queue.get()
+            operation = node["delegate"]
+            params = node["params"]
+            operation(params)
+            time.sleep(0.2)
+
+def http_failed_connection_handler(request):
+    request = str(request)
+    params = {"request": request}
+    file_operation_queue_add(record_request, params) 
+
+def record_request(params):
+    request = params["request"]
+    try:
+        request = str(request)
+        dbug.debug("Recording request for retransmission at a later time..")
+        file_read = open(DATA_FILE, 'r')
+        data = file_read.read()
+        data_len = len(data)
+
+        file_append = open(DATA_FILE, 'a')
+        request.replace("\'", "\"")
+        if(data_len > 1):
+            file_append.write(","+request)
+        else:
+            file_append.write(request)
+    except Exception as e:
+        print("Recording request failed: " + str(e))
+    finally:
+        file_append.close()
+        file_read.close()
 
 def create_heartbeat():
-	timestamp = datetime.datetime.now()
-	kiosk = socket.gethostname()
-	ip = socket.gethostbyname(kiosk)
-	heartbeat = '{"timestamp": "%s", "kiosk": "%s", "ip": "%s"}' % (timestamp, kiosk, ip)
-	f = open(DATA_FILE, "r")	
-	stored_requests = f.read()
-	if(len(stored_requests) > 0):
-		heartbeat += stored_requests
-	return heartbeat
+    timestamp = datetime.datetime.now()
+    kiosk = socket.gethostname()
+    ip = socket.gethostbyname(kiosk)
+    heartbeat = '{"heartbeat":{"timestamp": "%s", "kiosk": "%s", "ip": "%s"}}' % (timestamp, kiosk, ip)
+    f = open(DATA_FILE, "r")	
+    stored_requests = f.read().replace("\'", "\"")
+    if(len(stored_requests) > 1):
+        dbug.debug("Len: " + str(len(stored_requests)))
+        heartbeat += "," + stored_requests
+        heartbeat = '{"messages":[' + heartbeat + "]}"
+    return heartbeat
 
 def http_result_handler(result):
     command_list = {"play_sequence":commands.play_sequence,"test": commands.test_command, "loadsequence":commands.load_sequence, "printdata":commands.print_data, "updateleds":commands.update_lights, "blanklightars":commands.blank_lightbars}
 
     try:
-    	json_data = json.loads(result)
+        json_data = json.loads(result)
     
         serv_commands = json_data['commands']
 
         for comm in serv_commands:
             if(comm['command'] in command_list):
-        	    command_list[comm['command']](comm)
+                command_list[comm['command']](comm)
     except Exception as e:
         dbug.debug("response from webserver probably isn't JSON format.. " + str(e))
 		
 def bcode_handler(bcode):
     check_in = create_check_in(bcode)
-    #record_check_in(check_in)
-    params = {"host":HOST, "port":PORT, "method":METHOD, "resource":RESOURCE, "data":json.loads(check_in), "result_callback":http_result_handler, "connection_failed_callback":record_check_in}  
-    create_thread_worker(http.http_request, params)
+    #check_in_json = json.loads(check_in)
+    params = {"host":HOST, "port":PORT, "method":METHOD, "resource":RESOURCE, "data":check_in, "result_callback":http_result_handler, "connection_failed_callback":http_failed_connection_handler}  
+    f = open(DATA_FILE, "r")
+    file_size = len(f.read())
+    if(file_size > 1):
+        record_request({"request": params})
+    else:
+        create_thread_worker(http.http_request, params)
 
 def create_thread_worker(delegate, delegate_params):
     new_thread = thread_worker(delegate, delegate_params)
@@ -94,6 +136,7 @@ def refresh_thread_array():
     for t in threading.enumerate():
         threads.append(t)
 
+
 def ticker(params):
     time_in_seconds = params["time"]
     delegate = params["delegate"]
@@ -103,14 +146,19 @@ def ticker(params):
         time.sleep(time_in_seconds)
         delegate(delegate_params)
 
+
 def main():
     bcode_listen.start_listening(bcode_handler)
 
-    data = create_heartbeat() 
-    params = {"host":HOST, "port":PORT, "method":METHOD, "resource":RESOURCE, "data":json.loads(data), "callback":http_result_handler}
+    data = create_heartbeat()
+    dbug.debug(data)
+    data_json = json.loads(data)
+    params = {"host":HOST, "port":PORT, "method":METHOD, "resource":RESOURCE, "data":data_json, "result_callback":http_result_handler, "connection_failed_callback":http_failed_connection_handler}
 		
     ticker_params = {"time":PAUSE_BETWEEN_HEARBEAT, "delegate": http.http_request, "delegate_params": params}
     create_thread_worker(ticker, ticker_params)	
+
+    create_thread_worker(file_operation_queue_perform_operations, None)
 
     while(True):    	
         time.sleep(MAINLOOP_PAUSE)
