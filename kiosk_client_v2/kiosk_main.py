@@ -150,10 +150,7 @@ def ticker(params):
 def main():
     bcode_listen.start_listening(bcode_handler)
 
-    data = create_heartbeat()
-    dbug.debug(data)
-    data_json = json.loads(data)
-    params = {"host":HOST, "port":PORT, "method":METHOD, "resource":RESOURCE, "data":data_json, "result_callback":http_result_handler, "connection_failed_callback":http_failed_connection_handler}
+    params = {"host":HOST, "port":PORT, "method":METHOD, "resource":RESOURCE, "data":"", "result_callback":http_result_handler, "connection_failed_callback":http_failed_connection_handler}
 		
     ticker_params = {"time":PAUSE_BETWEEN_HEARBEAT, "delegate": http.http_request, "delegate_params": params}
     create_thread_worker(ticker, ticker_params)	
