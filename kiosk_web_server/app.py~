@@ -1,0 +1,55 @@
+from flask import Flask, url_for, render_template
+import pymysql
+
+app = Flask(__name__)
+template = 'default/'
+
+db_config = {
+	'user':'dev_kiosk',
+	'password':'',
+	'host':'localhost',
+	'database':'dev_kiosk'
+}
+
+def query_db(query):
+	try:
+		conn = pymysql.connect(**db_config)
+		cursor = conn.cursor()
+		cursor.execute(query)
+		conn.close()
+		return cursor
+
+	except Exception as err:
+		print(str(err))
+
+@app.route("/")
+def index():
+	stylesheet = url_for('static', filename='style/style.css')
+	
+	title = "Home"
+	header = render_template(template+'header.html', title=title)
+	
+	query = ('SELECT * FROM check_ins;')
+	result = query_db(query)
+
+	grid = render_template(template+'table.html', table=result)
+	
+	footer = render_template(template+'footer.html')
+	
+	return header+grid+footer
+
+@app.route("/hello")
+def hello():
+	return "Hello World"
+	
+@app.route("/checkin/add")
+def add_checkin():
+	if (request.method == 'POST'):
+		kiosk_id = request.kiosk_id
+		user_id = request.user_id
+		query = "INSERT INTO check_ins (kiosk_id, user_id) VALUES (%s, %s)" % (kiosk_id, user_id)
+
+if __name__ == "__main__":
+	app.run(debug=True)
+
+

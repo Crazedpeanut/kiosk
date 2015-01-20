@@ -4,8 +4,9 @@ Date: 18/12/14
 
 Description: Main script for the kiosk application. Functions called from the main loop are ran in separate threads
 '''
-#TODO - Include saved data from failed connection attempts to HTTP requests (heartbeats)
+#TODO - Don't add full http request to data file after failed connection
 
+import sqlite3 as lite
 import kiosk_http as http
 import time, datetime
 import simplejson as json
@@ -15,15 +16,22 @@ import commands
 import threading
 import debug as dbug
 import settings
-import queue 
+import queue
+import datetime
+#import ast
 
 HOST = settings.WEB_SERVER_HOST
 PORT = settings.WEB_SERVER_PORT
 METHOD = "POST"
-RESOURCE = "/barcode/test.php"
+TEST_RESOURCE = "/barcode/test.php"
+ADD_CHECKIN = "/checkin/add"
+ADD_HEARTBEAT = "/heartbeat/add"
 PAUSE_BETWEEN_HEARBEAT = 60
 DATA_FILE = settings.STORED_REQUESTS_FILE
 MAINLOOP_PAUSE = 0.001
+LOCALDB = settings.LOCAL_DB
+
+LAST_SERVER_CONTACT = ""
 
 data_file_operation_queue = queue.Queue()
 threads = []
@@ -44,7 +52,7 @@ class thread_worker(threading.Thread):
 
 def create_check_in(barcode):	
     kiosk = socket.gethostname()
-    return {"checkin":{"barcode": barcode, "kiosk": kiosk}}
+    return {"checkin":{"barcode": barcode, "host": kiosk}}
 
 def file_operation_queue_add(delegate, params):
     queue_node = {"delegate" : delegate, "params":params}
@@ -70,37 +78,64 @@ def record_request(params):
     try:
         request = str(request)
         dbug.debug("Recording request for retransmission at a later time..")
-        file_read = open(DATA_FILE, 'r')
-        data = file_read.read()
-        data_len = len(data)
+        
+        #file_append = open(DATA_FILE, 'a')
+        #request.replace("\'", "\"")
+        #file_append.write(request)
 
-        file_append = open(DATA_FILE, 'a')
-        request.replace("\'", "\"")
-        if(data_len > 1):
-            file_append.write(","+request)
-        else:
-            file_append.write(request)
+        db_conn = lite.connect(LOCALDB)
+        db_cur = db_conn.cursor()
+
+        request = json.loads(request)
+        if('heartbeat' in request):
+            db_cur.execute("INSERT INTO heartbeats (host, ip) VALUES ('%s', '%s')" % (request['heartbeat']['host'], request['heartbeat']['ip']))
+            dbug.debug("Heartbeat stored.")
+        elif('checkin'):
+            db_cur.execute("INSERT INTO check_ins (barcode, host) VALUES ('%s', '%s')" % (request['checkin']['barcode'],request['checkin']['host']))
+            dbug.debug("Check in stored.")
+
+        db_conn.commit()
     except Exception as e:
-        print("Recording request failed: " + str(e))
-    finally:
-        file_append.close()
-        file_read.close()
+        dbug.debug("Recording request failed: " + str(e))
 
 def create_heartbeat():
-    timestamp = datetime.datetime.now()
+    timestamp = str(datetime.datetime.now())
     kiosk = socket.gethostname()
     ip = socket.gethostbyname(kiosk)
-    heartbeat = '{"heartbeat":{"timestamp": "%s", "kiosk": "%s", "ip": "%s"}}' % (timestamp, kiosk, ip)
-    f = open(DATA_FILE, "r")	
-    stored_requests = f.read().replace("\'", "\"")
-    if(len(stored_requests) > 1):
-        dbug.debug("Len: " + str(len(stored_requests)))
-        heartbeat += "," + stored_requests
-        heartbeat = '{"messages":[' + heartbeat + "]}"
+
+    heartbeat = {"heartbeat":{"timestamp": timestamp, "host": kiosk, "ip": ip}}
     return heartbeat
 
+def send_heartbeat():
+    heartbeat = create_heartbeat()
+
+    params = {"host":HOST, "port":PORT, "method":METHOD, "resource":ADD_HEARTBEAT, "data":heartbeat, "result_callback":http_result_handler, "connection_failed_callback":http_failed_connection_handler}
+    http.http_request(params)
+		
+def send_stored_data():
+    db_conn = lite.connect(LOCALDB)
+    db_cur = db_conn.cursor()
+
+    for row in db_cur.execute("SELECT * from check_ins"):
+        check_in = create_check_in(row[1])
+
+        params = {"host":HOST, "port":PORT, "method":METHOD, "resource":ADD_CHECKIN, "data":check_in, "result_callback":http_result_handler, "connection_failed_callback":http_failed_connection_handler}  
+    
+        create_thread_worker(http.http_request, params)
+        
+        query = "DELETE FROM check_ins WHERE id = %d" % (row[0])
+        db_cur.execute(query)
+        db_conn.commit()
+        
 def http_result_handler(result):
     command_list = {"play_sequence":commands.play_sequence,"test": commands.test_command, "loadsequence":commands.load_sequence, "printdata":commands.print_data, "updateleds":commands.update_lights, "blanklightars":commands.blank_lightbars}
+
+    LAST_SERVER_CONTACT = datetime.datetime.now()
+
+    send_stored_data()
+
+    if(len(result) < 1):
+        return
 
     try:
         json_data = json.loads(result)
@@ -115,14 +150,10 @@ def http_result_handler(result):
 		
 def bcode_handler(bcode):
     check_in = create_check_in(bcode)
-    #check_in_json = json.loads(check_in)
-    params = {"host":HOST, "port":PORT, "method":METHOD, "resource":RESOURCE, "data":check_in, "result_callback":http_result_handler, "connection_failed_callback":http_failed_connection_handler}  
-    f = open(DATA_FILE, "r")
-    file_size = len(f.read())
-    if(file_size > 1):
-        record_request({"request": params})
-    else:
-        create_thread_worker(http.http_request, params)
+
+    params = {"host":HOST, "port":PORT, "method":METHOD, "resource":ADD_CHECKIN, "data":check_in, "result_callback":http_result_handler, "connection_failed_callback":http_failed_connection_handler}  
+
+    create_thread_worker(http.http_request, params)
 
 def create_thread_worker(delegate, delegate_params):
     new_thread = thread_worker(delegate, delegate_params)
@@ -144,15 +175,15 @@ def ticker(params):
 
     while(True):
         time.sleep(time_in_seconds)
-        delegate(delegate_params)
-
+        if(delegate_params is not None):
+            delegate(delegate_params)
+        else:
+            delegate()
 
 def main():
     bcode_listen.start_listening(bcode_handler)
 
-    params = {"host":HOST, "port":PORT, "method":METHOD, "resource":RESOURCE, "data":"", "result_callback":http_result_handler, "connection_failed_callback":http_failed_connection_handler}
-		
-    ticker_params = {"time":PAUSE_BETWEEN_HEARBEAT, "delegate": http.http_request, "delegate_params": params}
+    ticker_params = {"time":PAUSE_BETWEEN_HEARBEAT, "delegate": send_heartbeat, "delegate_params": None}
     create_thread_worker(ticker, ticker_params)	
 
     create_thread_worker(file_operation_queue_perform_operations, None)

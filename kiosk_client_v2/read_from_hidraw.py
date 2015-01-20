@@ -16,29 +16,30 @@ TIME_WAIT = 0.2
 
 class bcode(threading.Thread):
     
-	def __init__(self, callback):
-		self.callback = callback
-		threading.Thread.__init__(self)
+    def __init__(self, callback):
+        self.callback = callback
+        threading.Thread.__init__(self)
 
-	def run(self):
-		try:
-			f = open('/dev/hidraw0', 'r')
-		except Exception as e:
-			dbug.debug(str(e))
+    def run(self):
+        try:
+            f = open('/dev/hidraw0', 'r')
 						
-		while(True):
-			barcode = ""
-            
-			b = f.read(buffersize)
-			dec = USBKey.usbkey_to_char(b[2])
+            while(True):
+                barcode = ""
 
-			while(dec is not None):
-				barcode = barcode + str(dec)
-				b = f.read(buffersize)
-				dec = USBKey.usbkey_to_char(b[2])
-			self.callback(barcode)
-			time.sleep(TIME_WAIT)
-		
+                b = f.read(buffersize)
+                dec = USBKey.usbkey_to_char(b[2])
+
+                while(dec is not None):
+                    barcode = barcode + str(dec)
+                    b = f.read(buffersize)
+                    dec = USBKey.usbkey_to_char(b[2])
+                self.callback(barcode)
+                time.sleep(TIME_WAIT)
+
+        except Exception as e:
+            dbug.debug(str(e))
+
 def print_barcode(barcode):
 	sys.stdout.write(barcode)
 

@@ -1,0 +1,17 @@
+{% if table %}
+
+	<table>
+		{% for row in table %}
+			<tr>
+				{% for item in row %}
+					<td>
+						{{ item }}
+					</td>
+				{% endfor %}
+			</tr>
+		{% endfor %}
+	</table>
+
+{% endif %}
+
+
