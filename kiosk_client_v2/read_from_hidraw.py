@@ -2,7 +2,8 @@
 Author: John Kendall
 Date: 18/12/14
 
-Description: Reads from the hidraw device file. As a way of binding to a barcode scanner (Requires either root permissions or read permission of the hidraw device file)
+Description: Reads from the hidraw device file. As a way of binding to a barcode scanner
+            (Requires either root permissions or read permission of the hidraw device file)
 '''
 import time
 import sys
@@ -21,24 +22,25 @@ class bcode(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        try:
-            f = open('/dev/hidraw0', 'r')
+        while(True):
+            try:
+                f = open('/dev/hidraw0', 'r')
 						
-            while(True):
-                barcode = ""
+                while(True):
+                    barcode = ""
 
-                b = f.read(buffersize)
-                dec = USBKey.usbkey_to_char(b[2])
-
-                while(dec is not None):
-                    barcode = barcode + str(dec)
                     b = f.read(buffersize)
                     dec = USBKey.usbkey_to_char(b[2])
-                self.callback(barcode)
-                time.sleep(TIME_WAIT)
 
-        except Exception as e:
-            dbug.debug(str(e))
+                    while(dec is not None):
+                        barcode = barcode + str(dec)
+                        b = f.read(buffersize)
+                        dec = USBKey.usbkey_to_char(b[2])
+                    self.callback(barcode)
+                    time.sleep(TIME_WAIT)
+
+            except Exception as e:
+                dbug.debug(str(e))
 
 def print_barcode(barcode):
 	sys.stdout.write(barcode)
