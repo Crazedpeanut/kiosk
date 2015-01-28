@@ -10,7 +10,7 @@ Description: Global application settings
 General
 '''
 STORED_REQUESTS_FILE = "data.json"
-
+LOCAL_DB = "data.db"
 '''
 Web Server Connection
 '''
@@ -24,4 +24,5 @@ Debug
 DEBUGGING = True
 DEBUGGING_MODE = 1
 PRINT_DATETIME = True
+
 

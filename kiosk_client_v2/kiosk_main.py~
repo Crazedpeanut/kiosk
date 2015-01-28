@@ -24,9 +24,12 @@ HOST = settings.WEB_SERVER_HOST
 PORT = settings.WEB_SERVER_PORT
 METHOD = "POST"
 TEST_RESOURCE = "/barcode/test.php"
-ADD_CHECKIN = "/checkin/add"
-ADD_HEARTBEAT = "/heartbeat/add"
-PAUSE_BETWEEN_HEARBEAT = 20
+
+#Resource must end with slash
+ADD_CHECKIN = "/kiosk/checkin/" 
+ADD_HEARTBEAT = "/kiosk/heartbeat/"
+
+PAUSE_BETWEEN_HEARBEAT = 60
 DATA_FILE = settings.STORED_REQUESTS_FILE
 MAINLOOP_PAUSE = 0.001
 LOCALDB = settings.LOCAL_DB
@@ -52,7 +55,7 @@ class thread_worker(threading.Thread):
 
 def create_check_in(barcode):	
     kiosk = socket.gethostname()
-    return {"checkin":{"barcode": barcode, "host": kiosk}}
+    return {"checkin":{"barcode": barcode, "address": kiosk}}
 
 def file_operation_queue_add(delegate, params):
     queue_node = {"delegate" : delegate, "params":params}
@@ -75,6 +78,7 @@ def http_failed_connection_handler(request):
 
 def record_request(params):
     request = params["request"]
+    print(request)
     try:
         request = str(request)
         dbug.debug("Recording request for retransmission at a later time..")
@@ -108,7 +112,8 @@ def create_heartbeat():
 
 def send_heartbeat():
     heartbeat = create_heartbeat()
-
+    heartbeat = heartbeat["heartbeat"]
+    
     params = {"host":HOST, "port":PORT, "method":METHOD, "resource":ADD_HEARTBEAT, "data":heartbeat, "result_callback":http_result_handler, "connection_failed_callback":http_failed_connection_handler}
     http.http_request(params)
 		
@@ -151,6 +156,8 @@ def http_result_handler(result):
 def bcode_handler(bcode):
     check_in = create_check_in(bcode)
 
+    check_in = check_in["checkin"]
+
     params = {"host":HOST, "port":PORT, "method":METHOD, "resource":ADD_CHECKIN, "data":check_in, "result_callback":http_result_handler, "connection_failed_callback":http_failed_connection_handler}  
 
     create_thread_worker(http.http_request, params)
@@ -184,7 +191,7 @@ def main():
     bcode_listen.start_listening(bcode_handler)
 
     ticker_params = {"time":PAUSE_BETWEEN_HEARBEAT, "delegate": send_heartbeat, "delegate_params": None}
-    create_thread_worker(ticker, ticker_params)	
+    #create_thread_worker(ticker, ticker_params)	
 
     create_thread_worker(file_operation_queue_perform_operations, None)
 

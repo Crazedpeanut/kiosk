@@ -14,8 +14,8 @@ LOCAL_DB = "data.db"
 '''
 Web Server Connection
 '''
-WEB_SERVER_HOST = "squirtle"
-WEB_SERVER_PORT = 5000
+WEB_SERVER_HOST = "10.10.10.159"
+WEB_SERVER_PORT = 8000
 ENCODING = "utf-8"
 
 '''
